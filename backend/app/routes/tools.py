@@ -1,11 +1,25 @@
 from fastapi import APIRouter, HTTPException
 from app.services.content_loader import load_collection, load_by_slug
 
-router = APIRouter(prefix="/tools", tags=["Tools"])
+router = APIRouter(
+    prefix="/tools",
+    tags=["Tools"]
+)
 
-@router.get("")
-def get_tools():
-    return load_collection("tools")
+@router.get("/")
+def list_tools():
+    """
+    List all published AI tools.
+
+    Used for:
+    - Homepage discovery
+    - Tool listing pages
+    """
+    tools = load_collection("tools")
+    return {
+        "count": len(tools),
+        "items": tools
+    }
 
 @router.get("/{slug}")
 def get_tool(slug: str):

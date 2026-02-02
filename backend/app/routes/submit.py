@@ -1,15 +1,46 @@
-from fastapi import APIRouter, Request
-from app.core.rate_limit import limiter
+from fastapi import APIRouter
+from datetime import datetime
+from slugify import slugify
+import uuid
+from app.services.md_writer import write_draft
 
-router = APIRouter(tags=["Submissions"])
+router = APIRouter(prefix="/submit", tags=["Submit"])
 
-@router.post("/submit-tool")
-@limiter.limit("5/minute")
-def submit_tool(request: Request, payload: dict):
-    # store raw payload (JSON or file)
-    return {"message": "Tool submitted for review"}
+@router.post("/")
+def submit_usecase(payload: dict):
+    """
+    Submit a use case.
+    Content is published immediately with low confidence
+    and marked as community-generated.
+    """
 
-@router.post("/submit-usecase")
-@limiter.limit("5/minute")
-def submit_usecase(request: Request, payload: dict):
-    return {"message": "Use case submitted for review"}
+    slug = slugify(payload["title"])
+
+    metadata = {
+        "id": str(uuid.uuid4()),
+        "title": payload["title"],
+        "slug": slug,
+        "tool_name": payload["tool_name"],
+        "summary": payload["summary"],
+
+        # 🔓 Open publishing model
+        "status": "published",
+        "confidence": "low",
+        "source": "community",
+
+        "created_at": datetime.utcnow().isoformat(),
+        "updated_at": datetime.utcnow().isoformat(),
+    }
+
+    write_draft(
+        collection="usecases",
+        slug=slug,
+        metadata=metadata,
+        content=payload["content"]
+    )
+
+    return {
+        "status": "published",
+        "slug": slug,
+        "confidence": "low"
+    }
